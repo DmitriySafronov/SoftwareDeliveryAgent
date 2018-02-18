@@ -36,9 +36,9 @@ $CHOCO_DEBUG="$AGENT_DATA\chocolatey.txt"
 
 # Parameters: module
 if ($args[0]) {
-    $MODULE=$args[0]
+	$MODULE=$args[0]
 } else {
-    $MODULE="help"
+	$MODULE="help"
 }
 
 ###########################################################################################################################################################
@@ -58,35 +58,35 @@ function debug_log{
 	)
 	#####
 
-    $DATE_LOG = get-date -uformat "%Y.%m.%d %T %Z"
-    if (Test-Path "$AGENT_DEBUG") {"${DATE_LOG} ## ${TAG} ## ${MESSAGE}" | Tee-Object -FilePath "$AGENT_DEBUG" -Append}
+	$DATE_LOG = get-date -uformat "%Y.%m.%d %T %Z"
+	if (Test-Path "$AGENT_DEBUG") {"${DATE_LOG} ## ${TAG} ## ${MESSAGE}" | Tee-Object -FilePath "$AGENT_DEBUG" -Append}
 }
 
 function queue_relauncher {
 	# Background queue tasks start
-    if ((Get-WmiObject Win32_Process -Filter "CommandLine Like '%$ThisScriptName queue_local%'" | Select-Object CommandLine | Measure).Count -eq 0) {
-	    Start-Process powershell -Argumentlist "$ThisScriptPath\$ThisScriptName queue_local"
-    } else {
-        debug_log -TAG "$TAG" -MESSAGE "Local queue manager is already running. Skipping..."
-    }
-    if ((Get-WmiObject Win32_Process -Filter "CommandLine Like '%$ThisScriptName queue_remote%'" | Select-Object CommandLine | Measure).Count -eq 0) {
-	    Start-Process powershell -Argumentlist "$ThisScriptPath\$ThisScriptName queue_remote"
-    } else {
-        debug_log -TAG "$TAG" -MESSAGE "Remote queue manager is already running. Skipping..."
-    }
+	if ((Get-WmiObject Win32_Process -Filter "CommandLine Like '%$ThisScriptName queue_local%'" | Select-Object CommandLine | Measure).Count -eq 0) {
+		Start-Process powershell -Argumentlist "$ThisScriptPath\$ThisScriptName queue_local"
+	} else {
+		debug_log -TAG "$TAG" -MESSAGE "Local queue manager is already running. Skipping..."
+	}
+	if ((Get-WmiObject Win32_Process -Filter "CommandLine Like '%$ThisScriptName queue_remote%'" | Select-Object CommandLine | Measure).Count -eq 0) {
+		Start-Process powershell -Argumentlist "$ThisScriptPath\$ThisScriptName queue_remote"
+	} else {
+		debug_log -TAG "$TAG" -MESSAGE "Remote queue manager is already running. Skipping..."
+	}
 }
 
 ################################################
 
 function check_choco {
-    #TODO
+	#TODO
 }
 
 
 function agent_state_save {
-    if ($env:USERNAME -ne "$env:COMPUTERNAME`$") {
-        debug_log -TAG "$TAG" -MESSAGE "Saving parameters is NOT allowed to user in DEBUG mode"
-    } else {
+	if ($env:USERNAME -ne "$env:COMPUTERNAME`$") {
+		debug_log -TAG "$TAG" -MESSAGE "Saving parameters is NOT allowed to user in DEBUG mode"
+	} else {
 		choco list --local-only -r | Set-Content "$SOURCE_STATE" | Out-Null
 	}
 
@@ -102,12 +102,12 @@ function agent_task_add {
 	)
 	#####
 
-    $TAG = "Local Queue"
+	$TAG = "Local Queue"
 
-    $ID=Get-Date -UFormat %s
+	$ID=Get-Date -UFormat %s
 	"$ID $TASK" >> $AGENT_QUEUE
 
-    debug_log -TAG "$TAG" -MESSAGE "Task added: $ACTION $TARGET"
+	debug_log -TAG "$TAG" -MESSAGE "Task added: $ACTION $TARGET"
 }
 
 function agent_task_remove {
@@ -116,11 +116,11 @@ function agent_task_remove {
 	)
 	#####
 
-    $TAG = "Local Queue"
+	$TAG = "Local Queue"
 
-    Get-Content $AGENT_QUEUE | Where {$_ -ne $TASK_WITH_ID} | Out-File $AGENT_QUEUE
+	Get-Content $AGENT_QUEUE | Where {$_ -ne $TASK_WITH_ID} | Out-File $AGENT_QUEUE
 
-    debug_log -TAG "$TAG" -MESSAGE "Task removed: $ACTION $TARGET"
+	debug_log -TAG "$TAG" -MESSAGE "Task removed: $ACTION $TARGET"
 }
 
 function agent_task_execute {
@@ -130,54 +130,54 @@ function agent_task_execute {
 	)
 	#####
 
-    $TAG = "Task Execution"
+	$TAG = "Task Execution"
 
-    # Create execution lock
-    New-Item -Path "$AGENT_LOCK_EXECUTION" -ItemType "file" -Force | Out-Null
+	# Create execution lock
+	New-Item -Path "$AGENT_LOCK_EXECUTION" -ItemType "file" -Force | Out-Null
 
-    ################################################
+	################################################
 
-    $Die=$false
+	$Die=$false
 
-    # Parameters: action
-    if (-not ($ACTION -eq 'install' -or $ACTION -eq 'uninstall' -or $ACTION -eq 'upgrade')) {
-        debug_log -TAG "$TAG" -MESSAGE "ERROR: Incorrect action defined!"
-        $Die=$true
-    }
+	# Parameters: action
+	if (-not ($ACTION -eq 'install' -or $ACTION -eq 'uninstall' -or $ACTION -eq 'upgrade')) {
+		debug_log -TAG "$TAG" -MESSAGE "ERROR: Incorrect action defined!"
+		$Die=$true
+	}
 
-    # Parameters: target
-    if (-not ($TARGET)) {
-        debug_log -TAG "$TAG" -MESSAGE "ERROR: No package defined!"
-        $Die=$true
-    } 
+	# Parameters: target
+	if (-not ($TARGET)) {
+		debug_log -TAG "$TAG" -MESSAGE "ERROR: No package defined!"
+		$Die=$true
+	} 
 
-    ################################################
+	################################################
 
-    # Exit on error(s) or run task
-    if (-not $Die) {   
-        $COUNT_INSTALLED = ((choco list --local-only -r | ForEach-Object {$_.split("|")[0]}) | Where-Object -FilterScript {$_ -eq "${TARGET}"} | Measure).Count
+	# Exit on error(s) or run task
+	if (-not $Die) {   
+		$COUNT_INSTALLED = ((choco list --local-only -r | ForEach-Object {$_.split("|")[0]}) | Where-Object -FilterScript {$_ -eq "${TARGET}"} | Measure).Count
 
-        if (($COUNT_INSTALLED -gt 0 -and $ACTION -eq 'install') -or ($COUNT_INSTALLED -eq 0 -and $ACTION -eq 'uninstall')) {
-            debug_log -TAG "$TAG" -MESSAGE "Skipping: $ACTION $TARGET"
-        } else {
-            debug_log -TAG "$TAG" -MESSAGE "Starting: $ACTION $TARGET"
+		if (($COUNT_INSTALLED -gt 0 -and $ACTION -eq 'install') -or ($COUNT_INSTALLED -eq 0 -and $ACTION -eq 'uninstall')) {
+			debug_log -TAG "$TAG" -MESSAGE "Skipping: $ACTION $TARGET"
+		} else {
+			debug_log -TAG "$TAG" -MESSAGE "Starting: $ACTION $TARGET"
 
-            ## WORKFLOW
-            if (Test-Path "$CHOCO_DEBUG") {
-                choco -v -y --no-progress | Tee-Object -FilePath "$CHOCO_DEBUG" -Append
-            } else{
-                choco $ACTION $TARGET -r -y --no-progress | Out-Null
-            }
+			## WORKFLOW
+			if (Test-Path "$CHOCO_DEBUG") {
+				choco -v -y --no-progress | Tee-Object -FilePath "$CHOCO_DEBUG" -Append
+			} else{
+				choco $ACTION $TARGET -r -y --no-progress | Out-Null
+			}
 
-            debug_log -TAG "$TAG" -MESSAGE "Finished: $ACTION $TARGET"
-            agent_state_save
-        }
-    }
+			debug_log -TAG "$TAG" -MESSAGE "Finished: $ACTION $TARGET"
+			agent_state_save
+		}
+	}
 
-    ################################################
+	################################################
 
-    # Remove execution lock
-    Remove-Item -Path "$AGENT_LOCK_EXECUTION" -Force | Out-Null
+	# Remove execution lock
+	Remove-Item -Path "$AGENT_LOCK_EXECUTION" -Force | Out-Null
 }
 
 ################################################
@@ -190,37 +190,37 @@ function agent_queue_local {
 	)
 	#####
 
-    $TAG = "Local Queue"
+	$TAG = "Local Queue"
 
 	# Create local queue file if not exist
 	if (-Not (Test-Path "$QUEUE")) { New-Item -Path "$QUEUE" -ItemType "file" -Force | Out-Null }
 
-    # Local queue check
-    Get-Content "$QUEUE" -Wait | ForEach-Object {
-        $AGENT_QUEUE_TASK="$_"
+	# Local queue check
+	Get-Content "$QUEUE" -Wait | ForEach-Object {
+		$AGENT_QUEUE_TASK="$_"
 
-        if ($AGENT_QUEUE_TASK.Contains(" ")) {
+		if ($AGENT_QUEUE_TASK.Contains(" ")) {
 
-            $ID=($AGENT_QUEUE_TASK).Split(" ")[0]
-            $ACTION=($AGENT_QUEUE_TASK).Split(" ")[1]
-            $TARGET=($AGENT_QUEUE_TASK).Split(" ")[2]
+			$ID=($AGENT_QUEUE_TASK).Split(" ")[0]
+			$ACTION=($AGENT_QUEUE_TASK).Split(" ")[1]
+			$TARGET=($AGENT_QUEUE_TASK).Split(" ")[2]
 
-            if ($ID -and $ACTION -and $TARGET) {
-                debug_log -TAG "$TAG" -MESSAGE "Processing: $ACTION $TARGET"
-                while (Test-Path "$AGENT_LOCK_EXECUTION" -or Test-Path "$AGENT_LOCK_MAINTENANCE"){
-                    debug_log -TAG "$TAG" -MESSAGE "Waiting for free task window"
-                    Start-Sleep -s 15
-                }
-                # Execute task
-                agent_task_execute -ACTION "$ACTION" -TARGET "$TARGET"
-            } else {
-                debug_log -TAG "$TAG" -MESSAGE "Incorrect: $AGENT_QUEUE_TASK"
+			if ($ID -and $ACTION -and $TARGET) {
+				debug_log -TAG "$TAG" -MESSAGE "Processing: $ACTION $TARGET"
+				while (Test-Path "$AGENT_LOCK_EXECUTION" -or Test-Path "$AGENT_LOCK_MAINTENANCE"){
+					debug_log -TAG "$TAG" -MESSAGE "Waiting for free task window"
+					Start-Sleep -s 15
+				}
+				# Execute task
+				agent_task_execute -ACTION "$ACTION" -TARGET "$TARGET"
+			} else {
+				debug_log -TAG "$TAG" -MESSAGE "Incorrect: $AGENT_QUEUE_TASK"
 			}
-        }
-        
-        # Remove task               
-        agent_task_remove -TASK_WITH_ID "$AGENT_QUEUE_TASK"
-    } | Out-Null
+		}
+		
+		# Remove task
+		agent_task_remove -TASK_WITH_ID "$AGENT_QUEUE_TASK"
+	} | Out-Null
 }
 
 function agent_queue_remote {
@@ -229,10 +229,10 @@ function agent_queue_remote {
 	)
 	#####
 
-    $TAG = "Remote Queue"
+	$TAG = "Remote Queue"
 
-    # Remote queue check
-    Get-Content "$QUEUE" -wait | ForEach-Object {
+	# Remote queue check
+	Get-Content "$QUEUE" -wait | ForEach-Object {
 		$AGENT_QUEUE_TASK="$_"
    
 		if ($AGENT_QUEUE_TASK.Contains(" ")) {
@@ -242,10 +242,10 @@ function agent_queue_remote {
 			$TARGET=($AGENT_QUEUE_TASK).Split(" ")[2]
 
 			if ($ID -and $ACTION -and $TARGET) {
-                debug_log -TAG "$TAG" -MESSAGE "Processing: $ACTION $TARGET"
+				debug_log -TAG "$TAG" -MESSAGE "Processing: $ACTION $TARGET"
 				agent_task_add -TASK "$ACTION $TARGET"
 			} else {
-                debug_log -TAG "$TAG" -MESSAGE "Incorrect: $AGENT_QUEUE_TASK"
+				debug_log -TAG "$TAG" -MESSAGE "Incorrect: $AGENT_QUEUE_TASK"
 			}
 		}
 	} | Out-Null
@@ -254,9 +254,9 @@ function agent_queue_remote {
 ################################################
 
 function agent_maintenance {
-    $TAG = "Maintenance"
+	$TAG = "Maintenance"
 
-    queue_relauncher
+	queue_relauncher
 }
 
 ###########################################################################################################################################################
@@ -264,115 +264,115 @@ function agent_maintenance {
 
 ### Local queue execution
 if ($MODULE -eq 'queue_local') {
-    if ($env:USERNAME -ne "$env:COMPUTERNAME`$") {
-        debug_log -TAG "$TAG" -MESSAGE "Local queue manager is NOT allowed to user in DEBUG mode"
-        Break
-    } else {
-        debug_log -TAG "$TAG" -MESSAGE "Local queue manager is starting..."
-    }
+	if ($env:USERNAME -ne "$env:COMPUTERNAME`$") {
+		debug_log -TAG "$TAG" -MESSAGE "Local queue manager is NOT allowed to user in DEBUG mode"
+		Break
+	} else {
+		debug_log -TAG "$TAG" -MESSAGE "Local queue manager is starting..."
+	}
 
 	# Endless cycle
 	while ($true) {
 		agent_queue_local -QUEUE "$AGENT_QUEUE"
 		Start-Sleep -s 10
-        debug_log -TAG "$TAG" -MESSAGE "Local queue manager is restarting..."
+		debug_log -TAG "$TAG" -MESSAGE "Local queue manager is restarting..."
 	}
 
 ################################################
 
 ### Remote queue execution
 } elseif ($MODULE -eq 'queue_remote') {
-    if ($env:USERNAME -ne "$env:COMPUTERNAME`$") {
-        debug_log -TAG "$TAG" -MESSAGE "Remote queue manager is NOT allowed to user in DEBUG mode"
-        Break
-    } else {
-        debug_log -TAG "$TAG" -MESSAGE "Remote queue manager is starting..."
-    }
+	if ($env:USERNAME -ne "$env:COMPUTERNAME`$") {
+		debug_log -TAG "$TAG" -MESSAGE "Remote queue manager is NOT allowed to user in DEBUG mode"
+		Break
+	} else {
+		debug_log -TAG "$TAG" -MESSAGE "Remote queue manager is starting..."
+	}
 
 	# Endless cycle
 	while ($true) {
 		agent_queue_remote -QUEUE "$SOURCE_QUEUE"
 		Start-Sleep -s 10
-        debug_log -TAG "$TAG" -MESSAGE "Remote queue manager is restarting..."
+		debug_log -TAG "$TAG" -MESSAGE "Remote queue manager is restarting..."
 	}
 
 ################################################
 
 ### Maintenance task
 } elseif ($MODULE -eq 'maintenance') {
-    if ($env:USERNAME -ne "$env:COMPUTERNAME`$") {
-        debug_log -TAG "$TAG" -MESSAGE "Maintenance task is NOT allowed to user in DEBUG mode, run it via Windows Task Scheduler"
-        Break
-    } else {
-        debug_log -TAG "$TAG" -MESSAGE "Maintenance task is starting..."
-    }
-     
-    while (Test-Path "$AGENT_LOCK_EXECUTION" -or Test-Path "$AGENT_LOCK_MAINTENANCE"){
-        debug_log -TAG "$TAG" -MESSAGE "Maintenance task is waiting for free task window..."
-        Start-Sleep -s 15
-    }
+	if ($env:USERNAME -ne "$env:COMPUTERNAME`$") {
+		debug_log -TAG "$TAG" -MESSAGE "Maintenance task is NOT allowed to user in DEBUG mode, run it via Windows Task Scheduler"
+		Break
+	} else {
+		debug_log -TAG "$TAG" -MESSAGE "Maintenance task is starting..."
+	}
+	 
+	while (Test-Path "$AGENT_LOCK_EXECUTION" -or Test-Path "$AGENT_LOCK_MAINTENANCE"){
+		debug_log -TAG "$TAG" -MESSAGE "Maintenance task is waiting for free task window..."
+		Start-Sleep -s 15
+	}
 
-    # Create maintenance lock
-    New-Item -Path "$AGENT_LOCK_MAINTENANCE" -ItemType "file" -Force | Out-Null
-    ################################################
-    
-    # Maintenance task
-    agent_maintenance
+	# Create maintenance lock
+	New-Item -Path "$AGENT_LOCK_MAINTENANCE" -ItemType "file" -Force | Out-Null
+	################################################
+	
+	# Maintenance task
+	agent_maintenance
 
-    ################################################
-    # Remove maintenance lock
-    Remove-Item -Path "$AGENT_LOCK_MAINTENANCE" -Force | Out-Null
+	################################################
+	# Remove maintenance lock
+	Remove-Item -Path "$AGENT_LOCK_MAINTENANCE" -Force | Out-Null
 
 ###########################################################################################################################################################
 
 ### Startup and setup
 } elseif ($MODULE -eq 'start') {
-    if ($env:USERNAME -ne "$env:COMPUTERNAME`$") {
-        debug_log -TAG "$TAG" -MESSAGE "Agent startup is NOT allowed to user in DEBUG mode"
-        Break
-    } else {
-        debug_log -TAG "$TAG" -MESSAGE "Invoking agent..."
-    }
+	if ($env:USERNAME -ne "$env:COMPUTERNAME`$") {
+		debug_log -TAG "$TAG" -MESSAGE "Agent startup is NOT allowed to user in DEBUG mode"
+		Break
+	} else {
+		debug_log -TAG "$TAG" -MESSAGE "Invoking agent..."
+	}
 
-    # Dirs
-    if (-not (Test-Path "$AGENT_DATA")) {New-Item -Path "$AGENT_DATA" -ItemType directory | Out-Null}
+	# Dirs
+	if (-not (Test-Path "$AGENT_DATA")) {New-Item -Path "$AGENT_DATA" -ItemType directory | Out-Null}
 
 	# Purge lockfiles
 	Remove-Item -Path "$AGENT_LOCK_EXECUTION" -Force | Out-Null
-    Remove-Item -Path "$AGENT_LOCK_MAINTENANCE" -Force | Out-Null
+	Remove-Item -Path "$AGENT_LOCK_MAINTENANCE" -Force | Out-Null
 	
 	# Background queue tasks start
-    queue_relauncher
+	queue_relauncher
 
-    # Saving state
-    agent_state_save
+	# Saving state
+	agent_state_save
 
 ################################################
 
 ### Shutdown
 } elseif ($MODULE -eq 'stop') {
-    debug_log -TAG "$TAG" -MESSAGE "Shutting down background processes..."
+	debug_log -TAG "$TAG" -MESSAGE "Shutting down background processes..."
 
 	# Background queue tasks kill
 	wmic Path win32_process Where "CommandLine Like `'%$ThisScriptName queue%`'" Call Terminate | Out-Null
 
-    # Saving state
-    agent_state_save
+	# Saving state
+	agent_state_save
 	
 ###########################################################################################################################################################
 
 ### Help =)
 } elseif ($MODULE -eq 'help') {
 	""
-    "$ThisProjectName`. YOU NEED ADMINISTRATIVE RIGHTS TO RUN THIS SCRIPT!"
+	"$ThisProjectName`. YOU NEED ADMINISTRATIVE RIGHTS TO RUN THIS SCRIPT!"
 	""
-    " Help:"
-    " - You can enable debug mode by creating an empty text file named $AGENT_DEBUG - this will log messages to $AGENT_DEBUG. To exit debug mode - remove that file."
+	" Help:"
+	" - You can enable debug mode by creating an empty text file named $AGENT_DEBUG - this will log messages to $AGENT_DEBUG. To exit debug mode - remove that file."
 	""
 
 ###########################################################################################################################################################
 
 } else {
-    debug_log -TAG "$TAG" -MESSAGE "ERROR: Incorrect action defined!"
-    Break
+	debug_log -TAG "$TAG" -MESSAGE "ERROR: Incorrect action defined!"
+	Break
 }
