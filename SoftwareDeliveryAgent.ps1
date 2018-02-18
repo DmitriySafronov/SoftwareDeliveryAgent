@@ -63,6 +63,12 @@ function debug_log{
 }
 
 function queue_relauncher {
+	# Checkking if chocolatey is installed
+	check_choco
+	
+	# Saving state
+	agent_state_save
+
 	# Background queue tasks start
 	if ((Get-WmiObject Win32_Process -Filter "CommandLine Like '%$ThisScriptName queue_local%'" | Select-Object CommandLine | Measure).Count -eq 0) {
 		Start-Process powershell -Argumentlist "$ThisScriptPath\$ThisScriptName queue_local"
@@ -79,9 +85,11 @@ function queue_relauncher {
 ################################################
 
 function check_choco {
-	#TODO
+	if ((Get-Command "choco.exe" -ErrorAction SilentlyContinue) -eq $null) {
+		debug_log -TAG "$TAG" -MESSAGE "Chocolatey is not found in your PATH. Attempting to install..."
+		[System.Net.WebRequest]::DefaultWebProxy.Credentials = [System.Net.CredentialCache]::DefaultCredentials; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1')) | Write-Host; refreshenv | Write-Host;
+	}
 }
-
 
 function agent_state_save {
 	if ($env:USERNAME -ne "$env:COMPUTERNAME`$") {
@@ -89,7 +97,6 @@ function agent_state_save {
 	} else {
 		choco list --local-only -r | Set-Content "$SOURCE_STATE" | Out-Null
 	}
-
 }
 
 ################################################
@@ -343,9 +350,6 @@ if ($MODULE -eq 'queue_local') {
 	
 	# Background queue tasks start
 	queue_relauncher
-
-	# Saving state
-	agent_state_save
 
 ################################################
 
