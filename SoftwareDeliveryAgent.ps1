@@ -164,7 +164,7 @@ function agent_task_execute {
 
 			## WORKFLOW
 			if (Test-Path "$CHOCO_DEBUG") {
-				choco -v -y --no-progress | Tee-Object -FilePath "$CHOCO_DEBUG" -Append
+				choco $ACTION $TARGET -v -y --no-progress | Tee-Object -FilePath "$CHOCO_DEBUG" -Append
 			} else{
 				choco $ACTION $TARGET -r -y --no-progress | Out-Null
 			}
