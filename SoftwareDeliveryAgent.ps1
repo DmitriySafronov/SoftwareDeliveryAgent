@@ -109,12 +109,12 @@ function agent_task_add {
 	)
 	#####
 
-	$TAG = "Local Queue"
+	$TAG = "Task Management"
 
 	$ID=Get-Date -UFormat %s
 	"$ID $TASK" >> $AGENT_QUEUE
 
-	debug_log -TAG "$TAG" -MESSAGE "Task added: $ACTION $TARGET"
+	debug_log -TAG "$TAG" -MESSAGE "Added: $ACTION $TARGET"
 }
 
 function agent_task_remove {
@@ -123,11 +123,11 @@ function agent_task_remove {
 	)
 	#####
 
-	$TAG = "Local Queue"
+	$TAG = "Task Management"
 
 	Get-Content $AGENT_QUEUE | Where {$_ -ne $TASK_WITH_ID} | Out-File $AGENT_QUEUE
 
-	debug_log -TAG "$TAG" -MESSAGE "Task removed: $ACTION $TARGET"
+	debug_log -TAG "$TAG" -MESSAGE "Removed: $ACTION $TARGET"
 }
 
 function agent_task_execute {
