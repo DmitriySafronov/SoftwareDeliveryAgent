@@ -355,9 +355,6 @@ if ($MODULE -eq 'queue_local') {
 
 	# Background queue tasks kill
 	wmic Path win32_process Where "CommandLine Like `'%$ThisScriptName queue%`'" Call Terminate | Out-Null
-
-	# Saving state
-	agent_state_save
 	
 ###########################################################################################################################################################
 
