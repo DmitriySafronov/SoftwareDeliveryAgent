@@ -105,16 +105,21 @@ function agent_state_save {
 
 function agent_task_add {
 	Param(
-		[string]$TASK
+		[string]$ACTION,
+		[string]$TARGET
 	)
 	#####
 
-	$TAG = "Task Management"
+	$TAG = "Management"
 
-	$ID=Get-Date -UFormat %s
-	"$ID $TASK" >> $AGENT_QUEUE
-
-	debug_log -TAG "$TAG" -MESSAGE "Added: $ACTION $TARGET"
+	$COUNT_INSTALLED = ((choco list --local-only -r | ForEach-Object {$_.split("|")[0]}) | Where-Object -FilterScript {$_ -eq "${TARGET}"} | Measure).Count
+	if (($COUNT_INSTALLED -gt 0 -and $ACTION -eq 'install') -or ($COUNT_INSTALLED -eq 0 -and $ACTION -eq 'uninstall')) {
+		debug_log -TAG "$TAG" -MESSAGE "Skipped: $ACTION $TARGET"
+	} else {
+		$ID=Get-Date -UFormat %s
+		"$ID $ACTION $TARGET" >> $AGENT_QUEUE
+		debug_log -TAG "$TAG" -MESSAGE "Added: $ACTION $TARGET"
+	}
 }
 
 function agent_task_remove {
@@ -123,7 +128,7 @@ function agent_task_remove {
 	)
 	#####
 
-	$TAG = "Task Management"
+	$TAG = "Management"
 
 	Get-Content $AGENT_QUEUE | Where {$_ -ne $TASK_WITH_ID} | Out-File $AGENT_QUEUE
 
@@ -137,7 +142,7 @@ function agent_task_execute {
 	)
 	#####
 
-	$TAG = "Task Execution"
+	$TAG = "Execution"
 
 	# Create execution lock
 	New-Item -Path "$AGENT_LOCK_EXECUTION" -ItemType "file" -Force | Out-Null
@@ -162,23 +167,17 @@ function agent_task_execute {
 
 	# Exit on error(s) or run task
 	if (-not $Die) {   
-		$COUNT_INSTALLED = ((choco list --local-only -r | ForEach-Object {$_.split("|")[0]}) | Where-Object -FilterScript {$_ -eq "${TARGET}"} | Measure).Count
+		debug_log -TAG "$TAG" -MESSAGE "Starting: $ACTION $TARGET"
 
-		if (($COUNT_INSTALLED -gt 0 -and $ACTION -eq 'install') -or ($COUNT_INSTALLED -eq 0 -and $ACTION -eq 'uninstall')) {
-			debug_log -TAG "$TAG" -MESSAGE "Skipping: $ACTION $TARGET"
-		} else {
-			debug_log -TAG "$TAG" -MESSAGE "Starting: $ACTION $TARGET"
-
-			## WORKFLOW
-			if (Test-Path "$CHOCO_DEBUG") {
-				choco $ACTION $TARGET -v -y --no-progress | Tee-Object -FilePath "$CHOCO_DEBUG" -Append
-			} else{
-				choco $ACTION $TARGET -r -y --no-progress | Out-Null
-			}
-
-			debug_log -TAG "$TAG" -MESSAGE "Finished: $ACTION $TARGET"
-			agent_state_save
+		## Chocolatey
+		if (Test-Path "$CHOCO_DEBUG") {
+			choco $ACTION $TARGET -v -y --no-progress | Tee-Object -FilePath "$CHOCO_DEBUG" -Append
+		} else{
+			choco $ACTION $TARGET -r -y --no-progress | Out-Null
 		}
+
+		debug_log -TAG "$TAG" -MESSAGE "Finished: $ACTION $TARGET"
+		agent_state_save
 	}
 
 	################################################
@@ -197,7 +196,7 @@ function agent_queue_local {
 	)
 	#####
 
-	$TAG = "Local Queue"
+	$TAG = "Local"
 
 	# Create local queue file if not exist
 	if (-Not (Test-Path "$QUEUE")) { New-Item -Path "$QUEUE" -ItemType "file" -Force | Out-Null }
@@ -236,7 +235,7 @@ function agent_queue_remote {
 	)
 	#####
 
-	$TAG = "Remote Queue"
+	$TAG = "Remote"
 
 	# Remote queue check
 	Get-Content "$QUEUE" -wait | ForEach-Object {
@@ -250,7 +249,7 @@ function agent_queue_remote {
 
 			if ($ID -and $ACTION -and $TARGET) {
 				debug_log -TAG "$TAG" -MESSAGE "Processing: $ACTION $TARGET"
-				agent_task_add -TASK "$ACTION $TARGET"
+				agent_task_add -ACTION "$ACTION" -TARGET "$TARGET"
 			} else {
 				debug_log -TAG "$TAG" -MESSAGE "Incorrect: $AGENT_QUEUE_TASK"
 			}
