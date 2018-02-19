@@ -63,7 +63,7 @@ function debug_log{
 }
 
 function queue_relauncher {
-	# Checkking if chocolatey is installed
+	# Checking if chocolatey is installed
 	check_choco
 	
 	# Saving state
