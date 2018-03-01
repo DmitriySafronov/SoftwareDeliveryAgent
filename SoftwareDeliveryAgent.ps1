@@ -3,22 +3,16 @@
 $DisplayName = "CyberBrain.pw Software Delivery Agent"
 $ThisProjectName = "SoftwareDeliveryAgent"
 
-################################################
+###########################################################################################################################################################
 
 $ThisScriptName = $MyInvocation.MyCommand.Name
 $ThisScriptPath = split-path -parent $MyInvocation.MyCommand.Definition
 
-###########################################################################################################################################################
-
-### Paths
-
-# Source
-$SOURCE="\\storage.skynet.tld"
-$SOURCE_PACKAGES="$SOURCE\deployment$\packages"
-$SOURCE_STATE="$SOURCE\sda_state$\$env:COMPUTERNAME.state"
-$SOURCE_QUEUE="$SOURCE\deployment$\queue\$env:COMPUTERNAME.queue"
+$TAG = "Global"
 
 ###########################################################################################################################################################
+
+### Local Paths
 
 # Agent
 $AGENT_DATA="$env:ProgramData\$ThisProjectName"
@@ -31,25 +25,9 @@ $AGENT_LOCK_EXECUTION="$AGENT_DATA\execution.lock"
 $CHOCO_DEBUG="$AGENT_DATA\chocolatey.txt"
 
 ###########################################################################################################################################################
-
-### Check
-
-# Parameters: module
-if ($args[0]) {
-	$MODULE=$args[0]
-} else {
-	$MODULE="help"
-}
-
-###########################################################################################################################################################
 ###########################################################################################################################################################
 
-
-### FUNCTIONS
-
-$TAG = "Global"
-
-################################################
+### Debug
 
 function debug_log{
 	Param(
@@ -61,6 +39,62 @@ function debug_log{
 	$DATE_LOG = get-date -uformat "%Y.%m.%d %T %Z"
 	if (Test-Path "$AGENT_DEBUG") {"${DATE_LOG} ## ${TAG} ## ${MESSAGE}" | Tee-Object -FilePath "$AGENT_DEBUG" -Append}
 }
+
+###########################################################################################################################################################
+
+### Remote part
+$RegDir = 'HKLM:\Software\CyberBrain.pw\Software Delivery Agent\'
+$Die = $false
+
+$RegName = "Source_Dir"
+$SOURCE_DIR=(Get-ItemProperty -Path $RegDir -Name $RegName -Erroraction 'silentlycontinue').$RegName
+if ($SOURCE_DIR) {
+	debug_log -TAG "$TAG" -MESSAGE "Source root dir: $SOURCE_DIR"
+	$SOURCE_STATE_DIR="$SOURCE_DIR\sda_state$"
+	$SOURCE_QUEUE_DIR="$SOURCE_DIR\sda_queue$"
+} else {
+	debug_log -TAG "$TAG" -MESSAGE "Source root dir is not set up. Trying per-dir setup..."
+	$RegName = "Source_Queue_Dir"
+	$SOURCE_QUEUE_DIR=(Get-ItemProperty -Path $RegDir -Name $RegName -Erroraction 'silentlycontinue').$RegName
+	if (-not $SOURCE_QUEUE_DIR) {
+		debug_log -TAG "$TAG" -MESSAGE "Source queue dir is not set up properly!"
+		$Die = $true
+	}
+
+	$RegName = "Source_State_Dir"
+	$SOURCE_STATE_DIR=(Get-ItemProperty -Path $RegDir -Name $RegName -Erroraction 'silentlycontinue').$RegName
+	if (-not $SOURCE_STATE_DIR) {
+		debug_log -TAG "$TAG" -MESSAGE "Source state dir is not set up properly!"
+		$Die = $true
+	}
+}
+
+if ($Die) {
+	debug_log -TAG "$TAG" -MESSAGE "Software Delivery Agent should be set up properly!"
+	Break
+}
+
+debug_log -TAG "$TAG" -MESSAGE "Source queue dir: $SOURCE_QUEUE_DIR"
+debug_log -TAG "$TAG" -MESSAGE "Source state dir: $SOURCE_STATE_DIR"
+
+$SOURCE_STATE="$SOURCE_STATE_DIR\$env:COMPUTERNAME.state"
+$SOURCE_QUEUE="$SOURCE_QUEUE_DIR\$env:COMPUTERNAME.queue"
+
+###########################################################################################################################################################
+###########################################################################################################################################################
+
+### Parameters: module
+
+if ($args[0]) {
+	$MODULE=$args[0]
+} else {
+	$MODULE="help"
+}
+
+###########################################################################################################################################################
+###########################################################################################################################################################
+
+### FUNCTIONS
 
 function queue_relauncher {
 	# Checking if chocolatey is installed
